@@ -41,7 +41,7 @@ module Scopes::Product
   ]
 
   ORDERING.each do |name|
-    next if %w(asecend_by_master_price descend_by_master_price).include?(name.to_s)
+    next if %w(ascend_by_master_price descend_by_master_price).include?(name.to_s)
     r = name.to_s.match(/(.*)_by_(.*)/)
 
     order_text = "products.#{r[2]} "
@@ -204,7 +204,7 @@ module Scopes::Product
   # there is alternative faster and more elegant solution, it has small drawback though,
   # it doesn stack with other scopes :/
   #
-  Product.add_search_scope :descend_by_popularity do
+  Product.scope :descend_by_popularity,
     {
       :joins => :master,
       :order => <<SQL
@@ -221,8 +221,8 @@ module Scopes::Product
              popular_variants.product_id = products.id
          ), 0) DESC
 SQL
+                
     }
-  end                         
 
   # Produce an array of keywords for use in scopes.
   # Always return array with at least an empty string to avoid SQL errors
