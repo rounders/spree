@@ -88,12 +88,12 @@ class ProductGroup < ActiveRecord::Base
 
     self
   end
-
+  
   def add_scope(scope_name, arguments=[])
-    if scope_name.to_s !~ /eval|send|system|[^a-z0-9_!?]/
+    if Product.search_scopes.include?(scope_name)
       self.product_scopes << ProductScope.new({
-          :name => scope_name.to_s,
-          :arguments => [*arguments]
+        :name => scope_name.to_s,
+        :arguments => [*arguments]
         })
     else
       raise ArgumentError.new("'#{scope_name}` can't be used as scope")

@@ -65,19 +65,38 @@ class Product < ActiveRecord::Base
   make_permalink
 
   alias :options :product_option_types
+  
+  cattr_accessor :search_scopes do
+    []
+  end
+  
+  def self.add_search_scope(name, &block)
+    metaclass = class << self; self; end 
+    metaclass.send(:define_method, name.to_sym, &block)
+    search_scopes << name.to_sym
+  end
 
   include ::Scopes::Product
+  
+  add_search_scope :not_deleted do
+    where("products.deleted_at is NULL")
+  end
 
-  #RAILS3 TODO -  scopes are duplicated here and in scopres/product.rb - can we DRY it up?
-  # default product scope only lists available and non-deleted products
-  scope :not_deleted,     where("products.deleted_at is NULL")
+  add_search_scope :available do |*on|
+    where("products.available_on <= ?", on.first || Time.zone.now)
+  end
 
-  scope :available,       lambda { |*on| where("products.available_on <= ?", on.first || Time.zone.now ) }
+  add_search_scope :active do
+    not_deleted.available
+  end
 
-  #RAILS 3 TODO - this scope doesn't match the original 2.3.x version, needs attention (but it works)
-  scope :active,          lambda{ not_deleted.available }
+  add_search_scope :on_hand do
+    where("products.count_on_hand > 0")
+  end
 
-  scope :on_hand,         where("products.count_on_hand > 0")
+  add_search_scope :taxons_name_eq do |name|
+    joins(:taxons).where(Taxon.arel_table[:name].eq(name))
+  end
 
   if (ActiveRecord::Base.connection.adapter_name == 'PostgreSQL')
     if ActiveRecord::Base.connection.tables.include?("products")
@@ -85,12 +104,13 @@ class Product < ActiveRecord::Base
     end
   else
     scope :group_by_products_id, { :group => "products.id" }
-  end
+  end         
+  search_scopes << :group_by_products_id
   search_methods :group_by_products_id
-
-  scope :id_equals, lambda { |input_id| where("products.id = ?", input_id) }
-
-  scope :taxons_name_eq, lambda { |name| joins(:taxons).where("taxons.name = ?", name) }
+  
+  add_search_scope :id_equals do |input_id|
+    where("products.id = ?", input_id)
+  end
 
   # ----------------------------------------------------------------------------------------------------------
   #
