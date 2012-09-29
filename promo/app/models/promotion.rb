@@ -23,17 +23,25 @@ class Promotion < ActiveRecord::Base
   scope :manual, where("code IS NOT NULL AND code <> ''")
 
   def eligible?(order)
-    !expired? && rules_are_eligible?(order)
+    !expired? && rules_are_eligible?(order) && !usage_limit_exceeded?(order)
+  end
+  
+  def usage_limit_exceeded?(order = nil)
+    usage_limit && adjusted_credits_count(order) >= usage_limit
   end
 
   def expired?
     starts_at && Time.now < starts_at ||
-    expires_at && Time.now > expires_at ||
-    usage_limit && credits_count >= usage_limit
+    expires_at && Time.now > expires_at
   end
 
   def credits_count
     credits.with_order.count
+  end
+  
+  def adjusted_credits_count(order)
+    return credits_count if order.nil?    
+    credits_count - (order.promotion_credit_exists?(self) ? 1 : 0)
   end
 
   def rules_are_eligible?(order)
