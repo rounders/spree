@@ -36,7 +36,7 @@ class Promotion < ActiveRecord::Base
   end
 
   def credits_count
-    credits.with_order.count
+    credits.with_order.select { |adj| adj.order.completed? }.count
   end
   
   def adjusted_credits_count(order)
